@@ -1,7 +1,7 @@
 #include <Arduino.h>
-#include <uart_reader.h>
 #include <MemoryFree.h>
 #include <U8g2lib.h>
+#include <uart_reader.h>
 
 U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI lcdDisp(U8G2_R0, 49, 48);
 
@@ -22,12 +22,12 @@ uint8_t packetCursor = 0;
 
 uint8_t recievedData[0xFF]; // maximum length of a packet
 
-
 void loop() {
   // put your main code here, to run repeatedly:
   recieveScooterData(&Serial1, &g_commState, recievedData, &packetCursor);
   if (g_commState.hasCompletedPacket) {
-    mijiaPacket *p = create_packet_from_array(recievedData, recievedData[2] + 6);
+    mijiaPacket *p =
+        create_packet_from_array(recievedData, recievedData[2] + 6);
     Serial.print("Free memory is: ");
     Serial.println(freeMemory());
     int8_t heightJump = lcdDisp.getMaxCharHeight();
@@ -41,7 +41,7 @@ void loop() {
       Serial.print(p->actualChecksum, HEX);
       Serial.print(p->originChecksum, HEX);
       Serial.println("----- END");
-      
+
     } else {
       lcdDisp.clearBuffer();
       sprintf(textBuffer, "Got pack [%x]", p->command);
@@ -63,5 +63,3 @@ void loop() {
     lcdHelloPrinted = true;
   }
 }
-
-

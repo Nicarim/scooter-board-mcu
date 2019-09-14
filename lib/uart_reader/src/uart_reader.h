@@ -1,14 +1,13 @@
 #pragma once
 
-#include <stdint.h>
 #include <Arduino.h>
+#include <stdint.h>
 
 const uint8_t miSignatureFirst = 0x55;
 const uint8_t miSignatureSecond = 0xAA;
 
 const uint8_t escSignatureFirst = 0x5A;
 const uint8_t escSignatureSecond = 0xA5;
-
 
 struct mijiaPacket {
   uint8_t sig1;
@@ -38,42 +37,33 @@ struct mijiaCommState {
   bool hasCompletedPacket = false;
 };
 
-enum ControllerSource {
-    MIJIA,
-    ESC,
-    UNKNOWN
-};
+enum ControllerSource { MIJIA, ESC, UNKNOWN };
 
 /*
  SCHEMATIC OF M365 CONTROLLERS
    +---------------------------------------------------------------------------------+
-   |   +----------------+                                                            |
-   |   |      BLE       |   ESC                    BMS Response                      |
-   |   |  Controller    +-------<-+                through ESC                       |
-   |   +----------------+      |  |      +------------------------------+            |
-   |       |  ^                |  |      | +-------------------------+  |            |
-   |       |  |                |  |      | |        BMS Request      |  |            |
-   |       |  |                |  |      v |        Through ESC      v  |            |
-   |       |  | SCOOTER(P) +---v--------------+              +--------------------+  |
-   |       |  +------------+      Engine      |              | Battery Controller |  |
-   |       |               | Controller (ESC) |              |        BMS         |  |
-   |       +-------------> +------------------+              +--------------------+  |
-   |         BLE (Passive)                                                           |
-   |                                                                                 |
+   |   +----------------+ | |   |      BLE       |   ESC                    BMS
+ Response                      | |   |  Controller    +-------<-+ through ESC |
+   |   +----------------+      |  |      +------------------------------+ | | |
+ ^                |  |      | +-------------------------+  |            | | |  |
+ |  |      | |        BMS Request      |  |            | |       |  | |  | v |
+ Through ESC      v  |            | |       |  | SCOOTER(P) +---v--------------+
+ +--------------------+  | |       |  +------------+      Engine      | |
+ Battery Controller |  | |       |               | Controller (ESC) | | BMS |  |
+   |       +-------------> +------------------+ +--------------------+  | | BLE
+ (Passive)                                                           | | |
    +---------------------------------------------------------------------------------+
 
 */
 
 enum SourceAddress {
-    BLE = 0x20, 
-    SCOOTER = 0x21,
-    SOURCE_ESC = 0x23,
-    BMS_REQUEST = 0x22,
-    BMS_RESPONSE = 0x25,
+  BLE = 0x20,
+  SCOOTER = 0x21,
+  SOURCE_ESC = 0x23,
+  BMS_REQUEST = 0x22,
+  BMS_RESPONSE = 0x25,
 };
 
-mijiaPacket* create_packet_from_array(uint8_t* data, uint8_t arraySize);
-void recieveScooterData(HardwareSerial *miSerial, 
-                        mijiaCommState *commState, 
-                        uint8_t *recievedData,
-                        uint8_t *packetCursor);
+mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize);
+void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
+                        uint8_t *recievedData, uint8_t *packetCursor);
