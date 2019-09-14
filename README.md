@@ -1,5 +1,7 @@
 # Scooter Board MCU
 
+[![Build Status](https://travis-ci.org/Nicarim/scooter-board-mcu.svg?branch=master)](https://travis-ci.org/Nicarim/scooter-board-mcu)
+
 This project is a base project for my own idea of writing a universal code for controllers that could control e-scooters and possibly replace the ones that already exist. 
 
 Code here is written keeping in mind that any controller could use it. For now it is tested on Arduino MEGA2560.
