@@ -1,8 +1,7 @@
-#ifndef UART_READER_H
-#define UART_READER_H
+#pragma once
 
 #include <stdint.h>
-#include <HardwareSerial.h>
+#include <Arduino.h>
 
 const uint8_t miSignatureFirst = 0x55;
 const uint8_t miSignatureSecond = 0xAA;
@@ -78,5 +77,3 @@ void recieveScooterData(HardwareSerial *miSerial,
                         mijiaCommState *commState, 
                         uint8_t *recievedData,
                         uint8_t *packetCursor);
-
-#endif

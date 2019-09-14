@@ -1,7 +1,78 @@
+#include <fakeit.hpp>
+#include <Arduino.h>
 #include <unity.h>
-#include "mocks/HardwareSerialMock.h"
+
+using namespace fakeit;
+
 #include <uart_reader.h>
-#include "gmock/gmock.h"
+
+
+void test_recieve_scooter_data_first_byte(void) {
+    Mock<HardwareSerial> hw_mock;
+
+    uint8_t recievedData[0xFF];
+    uint8_t packetCursor = 0;
+    mijiaCommState _commState;
+
+    Fake(Method(hw_mock, read));
+    Fake(Method(hw_mock, available));
+
+    When(Method(hw_mock, read)).Return(0x55);
+    When(Method(hw_mock, available)).Return(true).AlwaysReturn(false);
+
+    TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
+    TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+
+    HardwareSerial &hw = hw_mock.get();
+
+    recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+
+    TEST_ASSERT_EQUAL(recievedData[0], 0x55);
+    TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+    TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+}
+
+void test_recieve_scooter_data_whole_preamble_seperate(void) {
+    Mock<HardwareSerial> hw_mock;
+
+    uint8_t recievedData[0xFF];
+    uint8_t packetCursor = 0;
+    mijiaCommState _commState;
+
+    Fake(Method(hw_mock, read));
+    Fake(Method(hw_mock, available));
+
+    When(Method(hw_mock, read)).Return(0x55).Return(0xAA);
+    When(Method(hw_mock, available)).Return(true, 4_Times(false), 5_Times(false), 2_Times(true), 3_Times(false));
+
+    TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
+    TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+
+    HardwareSerial &hw = hw_mock.get();
+
+    recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+
+    TEST_ASSERT_EQUAL(recievedData[0], 0x55);
+    TEST_ASSERT_NOT_EQUAL(recievedData[1], 0xAA);
+    TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+    TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+
+
+    recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+
+    TEST_ASSERT_EQUAL(recievedData[0], 0x55);
+    TEST_ASSERT_NOT_EQUAL(recievedData[1], 0xAA);
+    TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+    TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+    
+
+    recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+
+    TEST_ASSERT_EQUAL(recievedData[0], 0x55);
+    TEST_ASSERT_EQUAL(recievedData[1], 0xAA);
+    TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+    TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
+}
 
 void test_packet_create_ble_correct_seven_length(void) {
     uint8_t* mp = new uint8_t[13] {
@@ -126,18 +197,15 @@ void test_packet_create_ble_invalid_crc(void) {
     delete[] mp;
 }
 
-void test_recieve_scooter_data_preamble(void) {
-
-}
-
 int main(int argc, char **argv) {
     UNITY_BEGIN();
+    RUN_TEST(test_recieve_scooter_data_first_byte);
+    RUN_TEST(test_recieve_scooter_data_whole_preamble_seperate);
     RUN_TEST(test_packet_create_ble_correct_six_length);
     RUN_TEST(test_packet_create_ble_correct_seven_length);
     RUN_TEST(test_packet_create_ble_correct_nine_length);
     RUN_TEST(test_packet_create_ble_invalid);
     RUN_TEST(test_packet_create_ble_invalid_crc);
-    RUN_TEST(test_recieve_scooter_data_preamble);
     UNITY_END();
 
     return 0;
