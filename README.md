@@ -12,8 +12,8 @@ Whole project is based on PlatformIO environment, using VSCode and its plugin. I
 
 All code that is going to be a shared library is aiming to have test cases for it. For that purposes two libraries are used:
 
-[FakeIT](https://github.com/eranpeer/FakeIt/wiki/Quickstart)
-[unity](https://github.com/ThrowTheSwitch/Unity)
+- [FakeIT](https://github.com/eranpeer/FakeIt/wiki/Quickstart)
+- [unity](https://github.com/ThrowTheSwitch/Unity)
 
 ## Running tests
 
