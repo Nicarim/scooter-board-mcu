@@ -33,7 +33,7 @@ void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
       !commState->hasCompletedBeforeCRC) {
     recievedData[3 + *packetCursor] = miSerial->read();
     ++*packetCursor;
-    if (*packetCursor > recievedData[2]) {
+    if (*packetCursor >= recievedData[2]) {
       commState->hasCompletedBeforeCRC = true;
     }
   }
