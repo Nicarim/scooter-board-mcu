@@ -8,6 +8,11 @@ U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI lcdDisp(U8G2_R0, 49, 48);
 char textBuffer[100];
 bool lcdHelloPrinted = false;
 
+struct scooterInfo {
+  int thorttle = 0;
+  int brake = 0;
+} sInfo;
+
 void setup() {
   // put your setup code here, to run once:
   Serial1.begin(115200);
@@ -28,9 +33,10 @@ void loop() {
   if (g_commState.hasCompletedPacket) {
     mijiaPacket *p =
         create_packet_from_array(recievedData, recievedData[2] + 6);
-    Serial.print("Free memory is: ");
-    Serial.println(freeMemory());
+    // Serial.print("Free memory is: ");
+    // Serial.println(freeMemory());
     int8_t heightJump = lcdDisp.getMaxCharHeight();
+    int8_t widthJump = lcdDisp.getMaxCharWidth();
     if (!p->validPacket) {
       Serial.print("Data validity is: ");
       Serial.println("BAD!!!");
@@ -42,14 +48,23 @@ void loop() {
       Serial.print(p->originChecksum, HEX);
       Serial.println("----- END");
 
-    } else {
+    } else if (p->command == 0x64 && p->source == 0x21) {
       lcdDisp.clearBuffer();
-      sprintf(textBuffer, "Got pack [%x]", p->command);
+      sprintf(textBuffer, "C: %x", p->command);
       lcdDisp.drawStr(0, heightJump * 1, textBuffer);
-      sprintf(textBuffer, "L[%x]", p->length);
+      sprintf(textBuffer, "L: %x", p->length);
       lcdDisp.drawStr(0, heightJump * 2 + 5, textBuffer);
-      sprintf(textBuffer, "S[%x]", p->source);
+      sprintf(textBuffer, "S: %x", p->source);
       lcdDisp.drawStr(0, heightJump * 3 + 5, textBuffer);
+      for (int i = 0; (i < p->payloadLength && i < 4); i++) {
+        sprintf(textBuffer, "A%d:%x", i, p->payloadData[i]);
+        lcdDisp.drawStr(0, heightJump * (4 + i) + 5, textBuffer);
+      }
+
+      for (int i = 4; (i < p->payloadLength && i < 10); i++) {
+        sprintf(textBuffer, "A%d:%x", i, p->payloadData[i]);
+        lcdDisp.drawStr(60, heightJump * (i - 4), textBuffer);
+      }
       lcdDisp.sendBuffer();
     }
     delete p;
@@ -58,7 +73,8 @@ void loop() {
   if (!lcdHelloPrinted) {
     lcdDisp.clearBuffer();
     lcdDisp.setFont(u8g2_font_artossans8_8r);
-    lcdDisp.drawStr(0, 20, "Your Scooter is ready");
+    lcdDisp.drawStr(0, 20, "Your Scooter");
+    lcdDisp.drawStr(0, 40, "is ready");
     lcdDisp.sendBuffer();
     lcdHelloPrinted = true;
   }
