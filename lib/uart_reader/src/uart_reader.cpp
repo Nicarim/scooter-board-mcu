@@ -33,13 +33,16 @@ void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
       !commState->hasCompletedBeforeCRC) {
     recievedData[3 + *packetCursor] = miSerial->read();
     ++*packetCursor;
-    if (*packetCursor >= recievedData[2]) {
+    if (*packetCursor > recievedData[2]) {
+      // First byte of data is not part of length,
+      // therefor we use > not >= (so 0 indexed data, equals 1 indexed size)
+      // These chinese...
       commState->hasCompletedBeforeCRC = true;
     }
   }
   if (miSerial->available() > 1 && commState->hasCompletedBeforeCRC) {
     recievedData[3 + *packetCursor] = miSerial->read();
-    recievedData[3 + *packetCursor + 1] = miSerial->read();
+    recievedData[4 + *packetCursor] = miSerial->read();
     commState->hasPreambleFirst = false;
     commState->hasPreambleSecond = false;
     commState->hasLength = false;
