@@ -67,3 +67,4 @@ enum SourceAddress {
 mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize);
 void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
                         uint8_t *recievedData, uint8_t *packetCursor);
+void reset_comm_state(mijiaCommState *c);

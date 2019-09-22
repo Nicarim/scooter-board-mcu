@@ -177,14 +177,19 @@ void test_recieve_data_full_valid_packet(void) {
 
   recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
 
+  TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+  TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
+  TEST_ASSERT_TRUE(_commState.hasLength);
+  TEST_ASSERT_TRUE(_commState.hasCompletedBeforeCRC);
+  TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
+  TEST_ASSERT_EQUAL(recievedData[8], 0xFF);
+  TEST_ASSERT_EQUAL(recievedData[9], 0xF0);
+  reset_comm_state(&_commState);
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
   TEST_ASSERT_FALSE(_commState.hasLength);
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
-  TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
-  TEST_ASSERT_EQUAL(recievedData[8], 0xFF);
-  TEST_ASSERT_EQUAL(recievedData[9], 0xF0);
-  TEST_ASSERT_EQUAL(packetCursor, 0);
+  TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
 }
 
 void test_recieve_data_not_recieving_when_completed(void) {
@@ -259,7 +264,7 @@ void test_packet_create_from_recieved_data(void) {
   TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
 
   recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
-  TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
+  TEST_ASSERT_TRUE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
 
   TEST_ASSERT_EQUAL(recievedData[11], 0x3F);

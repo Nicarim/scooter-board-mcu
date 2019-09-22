@@ -43,13 +43,16 @@ void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
   if (miSerial->available() > 1 && commState->hasCompletedBeforeCRC) {
     recievedData[3 + *packetCursor] = miSerial->read();
     recievedData[4 + *packetCursor] = miSerial->read();
-    commState->hasPreambleFirst = false;
-    commState->hasPreambleSecond = false;
-    commState->hasLength = false;
-    commState->hasCompletedBeforeCRC = false;
-    *packetCursor = 0;
     commState->hasCompletedPacket = true;
   }
+}
+
+void reset_comm_state(mijiaCommState *c) {
+  c->hasPreambleFirst = false;
+  c->hasPreambleSecond = false;
+  c->hasLength = false;
+  c->hasCompletedBeforeCRC = false;
+  c->hasCompletedPacket = false;
 }
 
 mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
