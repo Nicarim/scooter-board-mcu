@@ -1,7 +1,7 @@
+#include "comm/m365_uart.h"
 #include <Arduino.h>
 #include <MemoryFree.h>
 #include <U8g2lib.h>
-#include <uart_reader.h>
 
 U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI lcdDisp(U8G2_R0, 49, 48);
 
@@ -170,12 +170,11 @@ void loop() {
       //                           0x00, 0x00};            // CRC to be fileld
 
       uint8_t dataToSend[12] = {
-        0x55, 0xAA, 
-        0x06, 0x20, 0x61, 
-        0xB0, 0x20, // 5(offset), 6(len)
-        0x02, // 7
-        sInfo.thorttle, sInfo.brake, // 8(throttle), 9(brake)
-        0xB7, 0xFF // CRC
+          0x55,           0xAA,        0x06, 0x20,
+          0x61,           0xB0,        0x20, // 5(offset), 6(len)
+          0x02,                              // 7
+          sInfo.thorttle, sInfo.brake,       // 8(throttle), 9(brake)
+          0xB7,           0xFF               // CRC
       };
       uint16_t crccalc = 0x00;
       for (int i = 2; i < 10; i++) {

@@ -4,7 +4,7 @@
 
 using namespace fakeit;
 
-#include <uart_reader.h>
+#include "comm/m365_uart.h"
 
 void test_recieve_scooter_data_first_byte(void) {
   Mock<HardwareSerial> hw_mock;

@@ -1,4 +1,4 @@
-#include "uart_reader.h"
+#include "m365_uart.h"
 
 void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
                         uint8_t *recievedData, uint8_t *packetCursor) {
