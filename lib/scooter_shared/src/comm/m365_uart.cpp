@@ -103,54 +103,36 @@ mijiaPacket *M365UartReciever::CreatePacketFromRecieved() {
   return p;
 }
 
-// void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
-//                         uint8_t *recievedData, uint8_t *packetCursor) {}
+void M365UartReciever::PrintMijiaPacketToSerial(HardwareSerial *serial,
+                                                mijiaPacket *p, char prefix) {
+  // Structure is assumed as: --<prefix>: v1,v2,v3...vn
 
-// mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
+  serial->print("-*-");
+  serial->print(prefix);
+  serial->print(": ");
+  serial->print(p->length);
+  serial->print(",");
 
-//   mijiaPacket *p = new mijiaPacket();
+  serial->print(p->source);
+  serial->print(",");
 
-//   if (arraySize < 3) {
-//     p->validPacket = false;
-//     p->validPacketError = 1;
-//     return p;
-//   }
-//   p->sig1 = data[0];
-//   p->sig2 = data[1];
+  serial->print(p->command);
+  serial->print(",");
 
-//   p->length = data[2];
-//   p->actualChecksum += p->length;
+  serial->print(p->argument);
+  serial->print(",");
 
-//   if (p->length != arraySize - 6) {
-//     // "- 6" because of: preamble, length itself, CRC and source
-//     p->validPacket = false;
-//     p->validPacketError = 2;
-//     return p;
-//   }
+  serial->print(p->payloadLength);
+  serial->print(",");
 
-//   p->source = data[3];
-//   p->actualChecksum += p->source;
+  for (int i = 0; i < p->payloadLength; i++) {
+    serial->print(p->payloadData[i]);
+    serial->print(",");
+  }
 
-//   p->command = data[4];
-//   p->actualChecksum += p->command;
+  serial->print(p->originChecksum);
+  serial->print(",");
 
-//   p->argument = data[5];
-//   p->actualChecksum += p->argument;
-
-//   p->payloadLength = p->length - 2;
-//   if (p->payloadLength > 0) {
-//     for (int i = 0; i < p->payloadLength; i++) {
-//       p->payloadData[i] = data[6 + i];
-//       p->actualChecksum += p->payloadData[i];
-//     }
-//   }
-//   int offset = 6 + p->payloadLength;
-
-//   p->originChecksum = data[offset + 1] * 256 + data[offset];
-//   p->actualChecksum = 0xFFFF ^ p->actualChecksum;
-
-//   p->validPacket = (p->originChecksum == p->actualChecksum);
-//   p->validPacketError = (p->validPacket == true) ? 0 : 3;
-
-//   return p;
-// }
+  serial->print(p->actualChecksum);
+  serial->println("");
+}

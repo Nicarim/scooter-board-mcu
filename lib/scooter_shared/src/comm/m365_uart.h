@@ -39,23 +39,6 @@ struct mijiaCommState {
 
 enum ControllerSource { MIJIA, ESC, UNKNOWN };
 
-/*
- SCHEMATIC OF M365 CONTROLLERS
-   +---------------------------------------------------------------------------------+
-   |   +----------------+ | |   |      BLE       |   ESC                    BMS
- Response                      | |   |  Controller    +-------<-+ through ESC |
-   |   +----------------+      |  |      +------------------------------+ | | |
- ^                |  |      | +-------------------------+  |            | | |  |
- |  |      | |        BMS Request      |  |            | |       |  | |  | v |
- Through ESC      v  |            | |       |  | SCOOTER(P) +---v--------------+
- +--------------------+  | |       |  +------------+      Engine      | |
- Battery Controller |  | |       |               | Controller (ESC) | | BMS |  |
-   |       +-------------> +------------------+ +--------------------+  | | BLE
- (Passive)                                                           | | |
-   +---------------------------------------------------------------------------------+
-
-*/
-
 enum SourceAddress {
   BLE = 0x20,
   SCOOTER = 0x21,
@@ -98,6 +81,8 @@ public:
   void RecieveScooterData();
   void ResetCommState();
   mijiaPacket *CreatePacketFromRecieved();
+  static void PrintMijiaPacketToSerial(HardwareSerial *serial, mijiaPacket *p,
+                                       char prefix);
 
   uint8_t *GetPacketCursor() { return this->packetCursor; };
   void SetPacketCursor(uint8_t *packetCursor) {
@@ -109,9 +94,6 @@ public:
   void SetCommState(mijiaCommState *commState) { this->commState = commState; };
 
   uint8_t *GetRecievedData() { return this->recievedData; }
-};
 
-// mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize);
-// void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
-//                         uint8_t *recievedData, uint8_t *packetCursor);
-// void reset_comm_state(mijiaCommState *c);
+  bool HasCompletedData() { return this->commState->hasCompletedPacket; }
+};

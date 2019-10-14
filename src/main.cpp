@@ -1,13 +1,13 @@
+#include "ScooterInfo.h"
 #include "comm/m365_uart.h"
+#include "screens/SSD1306Screen.h"
 #include <Arduino.h>
 #include <MemoryFree.h>
-#include <U8g2lib.h>
 
-U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI lcdDisp(U8G2_R0, 49, 48);
+SSD1306Screen *scr;
 
 #define ENABLE_WRITE_PIN 22
 
-char textBuffer[100];
 bool lcdHelloPrinted = false;
 unsigned long lastSuccess;
 unsigned long startSend;
@@ -17,18 +17,12 @@ M365UartReciever *uartReciever;
 mijiaCommState g_commState;
 uint8_t packetCursor = 0;
 
-struct scooterInfo {
-  uint8_t thorttle = 0;
-  uint8_t brake = 0;
-  uint16_t speed = 0;
-  char scooterName[255] = "";
-} sInfo;
+ScooterInfo sInfo;
 
 void setup() {
   // put your setup code here, to run once:
   Serial1.begin(115200);
   pinMode(ENABLE_WRITE_PIN, OUTPUT);
-  lcdDisp.begin();
   lastSuccess = millis();
   Serial.begin(192000);
   Serial.println("Starting sniffing");
@@ -36,104 +30,22 @@ void setup() {
   uartReciever->SetMiSerial(&Serial1);
   uartReciever->SetCommState(&g_commState);
   uartReciever->SetPacketCursor(&packetCursor);
-}
 
-// uint8_t recievedData[0xFF]; // maximum length of a packet
-
-void save_incoming_ble_data(mijiaPacket *p) {
-  sInfo.brake = p->payloadData[2];
-  sInfo.thorttle = p->payloadData[1];
+  scr = new SSD1306Screen(49, 48);
 }
 
 void print_packet_to_serial(mijiaPacket *p, char prefix) {
-  // Structure is assumed as: --<prefix>: v1,v2,v3...vn
-
-  Serial.print("-*-");
-  Serial.print(prefix);
-  Serial.print(": ");
-  Serial.print(p->length);
-  Serial.print(",");
-
-  Serial.print(p->source);
-  Serial.print(",");
-
-  Serial.print(p->command);
-  Serial.print(",");
-
-  Serial.print(p->argument);
-  Serial.print(",");
-
-  Serial.print(p->payloadLength);
-  Serial.print(",");
-
-  for (int i = 0; i < p->payloadLength; i++) {
-    Serial.print(p->payloadData[i]);
-    Serial.print(",");
-  }
-
-  Serial.print(p->originChecksum);
-  Serial.print(",");
-
-  Serial.print(p->actualChecksum);
-  Serial.println("");
+  M365UartReciever::PrintMijiaPacketToSerial(&Serial, p, prefix);
 }
 
-void display_debug_screen(mijiaPacket *p) {
-  Serial.print("Free memory is: ");
-  Serial.println(freeMemory());
+void display_debug_screen(mijiaPacket *p) { scr->DisplayDebug(p); }
 
-  int8_t heightJump = lcdDisp.getMaxCharHeight();
-  lcdDisp.clearBuffer();
-  sprintf(textBuffer, "C: %x", p->command);
-  lcdDisp.drawStr(0, heightJump * 1, textBuffer);
-  sprintf(textBuffer, "L: %x", p->length);
-  lcdDisp.drawStr(0, heightJump * 2 + 5, textBuffer);
-  sprintf(textBuffer, "S: %x", p->source);
-  lcdDisp.drawStr(0, heightJump * 3 + 5, textBuffer);
-  for (int i = 0; (i < p->payloadLength && i < 4); i++) {
-    sprintf(textBuffer, "A%d:%x", i, p->payloadData[i]);
-    lcdDisp.drawStr(0, heightJump * (4 + i) + 5, textBuffer);
-  }
-
-  for (int i = 4; (i < p->payloadLength && i < 10); i++) {
-    sprintf(textBuffer, "A%d:%x", i, p->payloadData[i]);
-    lcdDisp.drawStr(60, heightJump * (i - 4), textBuffer);
-  }
-}
-
-void display_triggers() {
-  lcdDisp.clearBuffer();
-  // sprintf(textBuffer, "Bra: %d", sInfo.brake);
-  float brakePercentage = (sInfo.brake - 40.0) / 154.0;
-  if (brakePercentage >= 0.01) {
-    lcdDisp.drawFrame(1, 1, 12, 62 * brakePercentage);
-  }
-
-  if (sInfo.scooterName[0] != 0) {
-    sprintf(textBuffer, "%.12s", sInfo.scooterName);
-    lcdDisp.drawStr(16, 8, textBuffer);
-  }
-
-  float throttlePercentage = (sInfo.thorttle - 40.0) / 155.0;
-  if (throttlePercentage >= 0.01) {
-    lcdDisp.drawBox(118, 70 - (90.0 * throttlePercentage), 12,
-                    90.0 * throttlePercentage);
-  }
-  double speedReal = ((double)sInfo.speed) / 1000.0f;
-  if ((int)sInfo.speed < 0) {
-    sprintf(textBuffer, "reverse");
-  } else {
-    sprintf(textBuffer, "%.1f km/h", speedReal);
-  }
-  lcdDisp.drawStr(20, 45, textBuffer);
-
-  lcdDisp.sendBuffer();
-}
+void display_triggers() { scr->DisplayTriggers(sInfo); }
 
 void loop() {
   // put your main code here, to run repeatedly:
   uartReciever->RecieveScooterData();
-  if (g_commState.hasCompletedPacket) {
+  if (uartReciever->HasCompletedData()) {
     // mijiaPacket *p =
     //     create_packet_from_array(recievedData, recievedData[2] + 6);
     mijiaPacket *p = uartReciever->CreatePacketFromRecieved();
@@ -148,7 +60,8 @@ void loop() {
       sInfo.speed = (p->payloadData[11] << 8) | p->payloadData[10];
     } else if (p->command == 0x64 && p->source == 0x20) {
       // print_packet_to_serial(p, 'D');
-      save_incoming_ble_data(p);
+      sInfo.brake = p->payloadData[2];
+      sInfo.thorttle = p->payloadData[1];
       lastSuccess = millis();
       messageSent = false;
       display_triggers();
@@ -195,11 +108,7 @@ void loop() {
   }
 
   if (!lcdHelloPrinted) {
-    lcdDisp.clearBuffer();
-    lcdDisp.setFont(u8g2_font_artossans8_8r);
-    lcdDisp.drawStr(0, 20, "Your Scooter");
-    lcdDisp.drawStr(0, 40, "is ready");
-    lcdDisp.sendBuffer();
+    scr->DisplayHello();
     lcdHelloPrinted = true;
   }
 }
