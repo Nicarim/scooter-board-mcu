@@ -1,7 +1,6 @@
 #include "m365_uart.h"
 
-void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
-                        uint8_t *recievedData, uint8_t *packetCursor) {
+void M365UartReciever::RecieveScooterData() {
   if (commState->hasCompletedPacket) {
     // We need to process current packet before we go further.
     return;
@@ -47,27 +46,27 @@ void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
   }
 }
 
-void reset_comm_state(mijiaCommState *c) {
-  c->hasPreambleFirst = false;
-  c->hasPreambleSecond = false;
-  c->hasLength = false;
-  c->hasCompletedBeforeCRC = false;
-  c->hasCompletedPacket = false;
+void M365UartReciever::ResetCommState() {
+  commState->hasPreambleFirst = false;
+  commState->hasPreambleSecond = false;
+  commState->hasLength = false;
+  commState->hasCompletedBeforeCRC = false;
+  commState->hasCompletedPacket = false;
 }
 
-mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
-
+mijiaPacket *M365UartReciever::CreatePacketFromRecieved() {
   mijiaPacket *p = new mijiaPacket();
+  int arraySize = recievedData[2] + 6;
 
   if (arraySize < 3) {
     p->validPacket = false;
     p->validPacketError = 1;
     return p;
   }
-  p->sig1 = data[0];
-  p->sig2 = data[1];
+  p->sig1 = recievedData[0];
+  p->sig2 = recievedData[1];
 
-  p->length = data[2];
+  p->length = recievedData[2];
   p->actualChecksum += p->length;
 
   if (p->length != arraySize - 6) {
@@ -77,25 +76,25 @@ mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
     return p;
   }
 
-  p->source = data[3];
+  p->source = recievedData[3];
   p->actualChecksum += p->source;
 
-  p->command = data[4];
+  p->command = recievedData[4];
   p->actualChecksum += p->command;
 
-  p->argument = data[5];
+  p->argument = recievedData[5];
   p->actualChecksum += p->argument;
 
   p->payloadLength = p->length - 2;
   if (p->payloadLength > 0) {
     for (int i = 0; i < p->payloadLength; i++) {
-      p->payloadData[i] = data[6 + i];
+      p->payloadData[i] = recievedData[6 + i];
       p->actualChecksum += p->payloadData[i];
     }
   }
   int offset = 6 + p->payloadLength;
 
-  p->originChecksum = data[offset + 1] * 256 + data[offset];
+  p->originChecksum = recievedData[offset + 1] * 256 + recievedData[offset];
   p->actualChecksum = 0xFFFF ^ p->actualChecksum;
 
   p->validPacket = (p->originChecksum == p->actualChecksum);
@@ -103,3 +102,55 @@ mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
 
   return p;
 }
+
+// void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
+//                         uint8_t *recievedData, uint8_t *packetCursor) {}
+
+// mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize) {
+
+//   mijiaPacket *p = new mijiaPacket();
+
+//   if (arraySize < 3) {
+//     p->validPacket = false;
+//     p->validPacketError = 1;
+//     return p;
+//   }
+//   p->sig1 = data[0];
+//   p->sig2 = data[1];
+
+//   p->length = data[2];
+//   p->actualChecksum += p->length;
+
+//   if (p->length != arraySize - 6) {
+//     // "- 6" because of: preamble, length itself, CRC and source
+//     p->validPacket = false;
+//     p->validPacketError = 2;
+//     return p;
+//   }
+
+//   p->source = data[3];
+//   p->actualChecksum += p->source;
+
+//   p->command = data[4];
+//   p->actualChecksum += p->command;
+
+//   p->argument = data[5];
+//   p->actualChecksum += p->argument;
+
+//   p->payloadLength = p->length - 2;
+//   if (p->payloadLength > 0) {
+//     for (int i = 0; i < p->payloadLength; i++) {
+//       p->payloadData[i] = data[6 + i];
+//       p->actualChecksum += p->payloadData[i];
+//     }
+//   }
+//   int offset = 6 + p->payloadLength;
+
+//   p->originChecksum = data[offset + 1] * 256 + data[offset];
+//   p->actualChecksum = 0xFFFF ^ p->actualChecksum;
+
+//   p->validPacket = (p->originChecksum == p->actualChecksum);
+//   p->validPacketError = (p->validPacket == true) ? 0 : 3;
+
+//   return p;
+// }

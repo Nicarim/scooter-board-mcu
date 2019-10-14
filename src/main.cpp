@@ -13,6 +13,9 @@ unsigned long lastSuccess;
 unsigned long startSend;
 bool messageSent = false;
 bool sentGateEnabled = false;
+M365UartReciever *uartReciever;
+mijiaCommState g_commState;
+uint8_t packetCursor = 0;
 
 struct scooterInfo {
   uint8_t thorttle = 0;
@@ -29,13 +32,13 @@ void setup() {
   lastSuccess = millis();
   Serial.begin(192000);
   Serial.println("Starting sniffing");
+  uartReciever = new M365UartReciever();
+  uartReciever->SetMiSerial(&Serial1);
+  uartReciever->SetCommState(&g_commState);
+  uartReciever->SetPacketCursor(&packetCursor);
 }
 
-mijiaCommState g_commState;
-
-uint8_t packetCursor = 0;
-
-uint8_t recievedData[0xFF]; // maximum length of a packet
+// uint8_t recievedData[0xFF]; // maximum length of a packet
 
 void save_incoming_ble_data(mijiaPacket *p) {
   sInfo.brake = p->payloadData[2];
@@ -129,13 +132,12 @@ void display_triggers() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  recieveScooterData(&Serial1, &g_commState, recievedData, &packetCursor);
+  uartReciever->RecieveScooterData();
   if (g_commState.hasCompletedPacket) {
-    mijiaPacket *p =
-        create_packet_from_array(recievedData, recievedData[2] + 6);
+    // mijiaPacket *p =
+    //     create_packet_from_array(recievedData, recievedData[2] + 6);
+    mijiaPacket *p = uartReciever->CreatePacketFromRecieved();
 
-    // int8_t heightJump = lcdDisp.getMaxCharHeight();
-    // int8_t widthJump = lcdDisp.getMaxCharWidth();
     if (!p->validPacket) {
       print_packet_to_serial(p, 'E');
     } else if (p->command == 0x01 && p->source == 0x24) {
@@ -154,7 +156,7 @@ void loop() {
       print_packet_to_serial(p, 'D');
     }
 
-    reset_comm_state(&g_commState);
+    uartReciever->ResetCommState();
     packetCursor = 0;
     delete p;
   }

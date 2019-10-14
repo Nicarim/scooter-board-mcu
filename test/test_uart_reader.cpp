@@ -6,10 +6,11 @@ using namespace fakeit;
 
 #include "comm/m365_uart.h"
 
+// TODO: convert all of it to classes.
+
 void test_recieve_scooter_data_first_byte(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
 
@@ -19,12 +20,15 @@ void test_recieve_scooter_data_first_byte(void) {
   When(Method(hw_mock, read)).Return(0x55);
   When(Method(hw_mock, available)).Return(true).AlwaysReturn(false);
 
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
+
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
 
-  HardwareSerial &hw = hw_mock.get();
+  c->RecieveScooterData();
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  uint8_t *recievedData = c->GetRecievedData();
 
   TEST_ASSERT_EQUAL(recievedData[0], 0x55);
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
@@ -34,9 +38,6 @@ void test_recieve_scooter_data_first_byte(void) {
 void test_recieve_scooter_data_whole_preamble_seperate(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
-  recievedData[0] = 0;
-  recievedData[1] = 0;
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
 
@@ -47,26 +48,29 @@ void test_recieve_scooter_data_whole_preamble_seperate(void) {
   When(Method(hw_mock, available))
       .Return(1, 4_Times(0), 5_Times(0), 2_Times(1), 3_Times(0));
 
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
+
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
 
-  HardwareSerial &hw = hw_mock.get();
+  c->RecieveScooterData();
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
-
-  TEST_ASSERT_EQUAL(recievedData[0], 0x55);
-  TEST_ASSERT_NOT_EQUAL(recievedData[1], 0xAA);
-  TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
-  TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
-
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  uint8_t *recievedData = c->GetRecievedData();
 
   TEST_ASSERT_EQUAL(recievedData[0], 0x55);
   TEST_ASSERT_NOT_EQUAL(recievedData[1], 0xAA);
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
+
+  TEST_ASSERT_EQUAL(recievedData[0], 0x55);
+  TEST_ASSERT_NOT_EQUAL(recievedData[1], 0xAA);
+  TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
+  TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
+
+  c->RecieveScooterData();
 
   TEST_ASSERT_EQUAL(recievedData[0], 0x55);
   TEST_ASSERT_EQUAL(recievedData[1], 0xAA);
@@ -77,9 +81,6 @@ void test_recieve_scooter_data_whole_preamble_seperate(void) {
 void test_recieve_data_with_length_no_data(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
-  recievedData[0] = 0;
-  recievedData[1] = 0;
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
 
@@ -89,13 +90,15 @@ void test_recieve_data_with_length_no_data(void) {
   When(Method(hw_mock, read)).Return(0x55, 0xAA, 0x04);
   When(Method(hw_mock, available)).Return(3_Times(1)).AlwaysReturn(0);
 
-  HardwareSerial &hw = hw_mock.get();
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
 
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
   TEST_ASSERT_FALSE(_commState.hasLength);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
+  uint8_t *recievedData = c->GetRecievedData();
 
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
   TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
@@ -109,7 +112,6 @@ void test_recieve_data_with_length_no_data(void) {
 void test_recieve_data_full_valid_packet(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
 
@@ -122,7 +124,8 @@ void test_recieve_data_full_valid_packet(void) {
       .Return(25_Times(1), 5_Times(2))
       .AlwaysReturn(0);
 
-  HardwareSerial &hw = hw_mock.get();
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
 
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
@@ -130,7 +133,8 @@ void test_recieve_data_full_valid_packet(void) {
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
+  uint8_t *recievedData = c->GetRecievedData();
 
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
   TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
@@ -144,21 +148,21 @@ void test_recieve_data_full_valid_packet(void) {
   TEST_ASSERT_EQUAL(recievedData[3], 0x01);
   TEST_ASSERT_NOT_EQUAL(recievedData[4], 0x02);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
 
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_TRUE(_commState.hasLength);
   TEST_ASSERT_EQUAL(recievedData[4], 0x02);
   TEST_ASSERT_NOT_EQUAL(recievedData[5], 0x03);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
 
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_TRUE(_commState.hasLength);
   TEST_ASSERT_EQUAL(recievedData[5], 0x03);
   TEST_ASSERT_NOT_EQUAL(recievedData[6], 0x04);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
 
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_TRUE(_commState.hasLength);
@@ -167,7 +171,7 @@ void test_recieve_data_full_valid_packet(void) {
   TEST_ASSERT_NOT_EQUAL(recievedData[8], 0xFF);
   TEST_ASSERT_NOT_EQUAL(recievedData[9], 0xF0);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
 
   TEST_ASSERT_TRUE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
@@ -175,7 +179,7 @@ void test_recieve_data_full_valid_packet(void) {
   TEST_ASSERT_NOT_EQUAL(recievedData[8], 0xFF);
   TEST_ASSERT_NOT_EQUAL(recievedData[9], 0xF0);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
 
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
   TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
@@ -184,7 +188,9 @@ void test_recieve_data_full_valid_packet(void) {
   TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
   TEST_ASSERT_EQUAL(recievedData[8], 0xFF);
   TEST_ASSERT_EQUAL(recievedData[9], 0xF0);
-  reset_comm_state(&_commState);
+
+  c->ResetCommState();
+
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
   TEST_ASSERT_FALSE(_commState.hasLength);
@@ -195,7 +201,6 @@ void test_recieve_data_full_valid_packet(void) {
 void test_recieve_data_not_recieving_when_completed(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
   _commState.hasCompletedPacket = true;
@@ -206,9 +211,10 @@ void test_recieve_data_not_recieving_when_completed(void) {
   When(Method(hw_mock, read)).AlwaysReturn(0x55);
   When(Method(hw_mock, available)).AlwaysReturn(1);
 
-  HardwareSerial &hw = hw_mock.get();
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
   TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
@@ -220,7 +226,6 @@ void test_recieve_data_not_recieving_when_completed(void) {
 void test_packet_create_from_recieved_data(void) {
   Mock<HardwareSerial> hw_mock;
 
-  uint8_t recievedData[0xFF] = {0};
   uint8_t packetCursor = 0;
   mijiaCommState _commState;
 
@@ -238,7 +243,8 @@ void test_packet_create_from_recieved_data(void) {
   When(Method(hw_mock, available))
       .Return(40_Times(1), 5_Times(2))
       .AlwaysReturn(0);
-  HardwareSerial &hw = hw_mock.get();
+  M365UartReciever *c =
+      new M365UartReciever(&_commState, &hw_mock.get(), &packetCursor);
 
   TEST_ASSERT_FALSE(_commState.hasPreambleFirst);
   TEST_ASSERT_FALSE(_commState.hasPreambleSecond);
@@ -246,7 +252,8 @@ void test_packet_create_from_recieved_data(void) {
   TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
+  uint8_t *recievedData = c->GetRecievedData();
 
   TEST_ASSERT_TRUE(_commState.hasPreambleFirst);
   TEST_ASSERT_TRUE(_commState.hasPreambleSecond);
@@ -256,14 +263,14 @@ void test_packet_create_from_recieved_data(void) {
                            // fetch one byte since it was in order
   TEST_ASSERT_NOT_EQUAL(recievedData[4], 0x65);
   for (int i = 0; i < 6; i++) {
-    recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+    c->RecieveScooterData();
     TEST_ASSERT_FALSE(_commState.hasCompletedBeforeCRC);
   }
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
   TEST_ASSERT_TRUE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_FALSE(_commState.hasCompletedPacket);
 
-  recieveScooterData(&hw, &_commState, recievedData, &packetCursor);
+  c->RecieveScooterData();
   TEST_ASSERT_TRUE(_commState.hasCompletedBeforeCRC);
   TEST_ASSERT_TRUE(_commState.hasCompletedPacket);
 
@@ -272,8 +279,7 @@ void test_packet_create_from_recieved_data(void) {
 
   // We got everything, now let's create packet
 
-  mijiaPacket *pack =
-      create_packet_from_array(recievedData, recievedData[2] + 6);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
 
   TEST_ASSERT_EQUAL(pack->validPacketError, 0);
   TEST_ASSERT_TRUE(pack->validPacket);
@@ -289,8 +295,8 @@ void test_packet_create_ble_correct_seven_length(void) {
       0x04, 0x1D, 0x13, 0x00, 0x00, // payload 6, 7, 8, 9, 10,
       0x3F, 0xFF                    // CRC 11, 12
   };
-
-  mijiaPacket *pack = create_packet_from_array(mp, 13);
+  M365UartReciever *c = new M365UartReciever(mp);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
 
   TEST_ASSERT_TRUE(pack->validPacket);
 
@@ -316,7 +322,8 @@ void test_packet_create_ble_correct_six_length(void) {
   uint8_t *mp = new uint8_t[12]{0x55, 0xAA, 0x06, 0x21, 0x64, 0x00,
                                 0x00, 0x00, 0x00, 0x00, 0x74, 0xFF};
 
-  mijiaPacket *pack = create_packet_from_array(mp, 12);
+  M365UartReciever *c = new M365UartReciever(mp);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
   TEST_ASSERT_TRUE(pack->validPacket);
 
   TEST_ASSERT_EQUAL(pack->sig1, mp[0]);
@@ -337,7 +344,8 @@ void test_packet_create_ble_correct_nine_length(void) {
   uint8_t *mp = new uint8_t[15]{0x55, 0xAA, 0x09, 0x20, 0x64, 0x00, 0x06, 0x27,
                                 0x26, 0x00, 0x00, 0x72, 0x00, 0xAD, 0xFE};
 
-  mijiaPacket *pack = create_packet_from_array(mp, 15);
+  M365UartReciever *c = new M365UartReciever(mp);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
   TEST_ASSERT_TRUE(pack->validPacket);
 
   TEST_ASSERT_EQUAL(pack->sig1, mp[0]);
@@ -361,7 +369,8 @@ void test_packet_create_ble_invalid(void) {
       0x20,       // source - which device 3
       0x65,       // command issued or answered 4
   };
-  mijiaPacket *pack = create_packet_from_array(mp, 5);
+  M365UartReciever *c = new M365UartReciever(mp);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
 
   TEST_ASSERT_FALSE(pack->validPacket);
 
@@ -384,7 +393,8 @@ void test_packet_create_ble_invalid_crc(void) {
       0x4F, 0xFF                    // CRC 11, 12
   };
 
-  mijiaPacket *pack = create_packet_from_array(mp, 13);
+  M365UartReciever *c = new M365UartReciever(mp);
+  mijiaPacket *pack = c->CreatePacketFromRecieved();
 
   TEST_ASSERT_FALSE(pack->validPacket);
   TEST_ASSERT_NOT_EQUAL(pack->originChecksum, pack->actualChecksum);

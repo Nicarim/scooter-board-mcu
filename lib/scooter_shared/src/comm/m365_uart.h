@@ -64,7 +64,54 @@ enum SourceAddress {
   BMS_RESPONSE = 0x25,
 };
 
-mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize);
-void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
-                        uint8_t *recievedData, uint8_t *packetCursor);
-void reset_comm_state(mijiaCommState *c);
+class M365UartReciever {
+private:
+  mijiaCommState *commState;
+  HardwareSerial *miSerial;
+  uint8_t *packetCursor;
+  uint8_t *recievedData;
+
+public:
+  M365UartReciever() {
+    this->commState = nullptr;
+    this->miSerial = nullptr;
+    this->packetCursor = nullptr;
+    this->recievedData = new uint8_t[0xFF]{0};
+  };
+
+  M365UartReciever(uint8_t *recievedData) {
+    this->commState = nullptr;
+    this->miSerial = nullptr;
+    this->packetCursor = nullptr;
+    this->recievedData = recievedData;
+  };
+
+  M365UartReciever(mijiaCommState *commState, HardwareSerial *miSerial,
+                   uint8_t *packetCursor) {
+    this->commState = commState;
+    this->miSerial = miSerial;
+    this->packetCursor = packetCursor;
+    this->recievedData = new uint8_t[0xFF]{0};
+  };
+
+  void InitializeWithDefault();
+  void RecieveScooterData();
+  void ResetCommState();
+  mijiaPacket *CreatePacketFromRecieved();
+
+  uint8_t *GetPacketCursor() { return this->packetCursor; };
+  void SetPacketCursor(uint8_t *packetCursor) {
+    this->packetCursor = packetCursor;
+  };
+
+  void SetMiSerial(HardwareSerial *miSerial) { this->miSerial = miSerial; };
+
+  void SetCommState(mijiaCommState *commState) { this->commState = commState; };
+
+  uint8_t *GetRecievedData() { return this->recievedData; }
+};
+
+// mijiaPacket *create_packet_from_array(uint8_t *data, uint8_t arraySize);
+// void recieveScooterData(HardwareSerial *miSerial, mijiaCommState *commState,
+//                         uint8_t *recievedData, uint8_t *packetCursor);
+// void reset_comm_state(mijiaCommState *c);
