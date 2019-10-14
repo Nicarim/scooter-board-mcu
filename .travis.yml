@@ -14,4 +14,4 @@ install:
 
 script:
   - platformio test -v -e native-test
-  - platformio build
+  - platformio run --environment megaatmega2560
